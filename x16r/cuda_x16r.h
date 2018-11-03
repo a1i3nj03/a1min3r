@@ -78,6 +78,6 @@ void x16_whirlpool512_init(int thr_id, uint32_t threads);
 void x16_whirlpool512_setBlock_80(int thr_id, void* endiandata);
 void x16_whirlpool512_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_hash, volatile int *order);
 
-void x16_sha512_setBlock_80(int thr_id, void *pdata);
+void x16_sha512_setBlock_80(void *pdata);
 void x16_sha512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_hash, volatile int *order);
 

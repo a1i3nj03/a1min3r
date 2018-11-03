@@ -313,7 +313,11 @@
     <ClInclude Include="quark\groestl_functions_quad_a1_min3r.cuh" />
     <ClInclude Include="quark\groestl_transf_quad_a1_min3r.cuh" />
     <ClInclude Include="quark\groestl_simple.cuh" />
+    <ClInclude Include="x11\alt_simd_fn.cuh">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="x11\cuda_x11_aes_alexis.cuh" />
+    <ClInclude Include="x11\cuda_x11_aes_sp.cuh" />
     <ClInclude Include="x11\cuda_x11_echo_aes.cuh" />
     <ClInclude Include="x11\cuda_x11_simd512_sm2.cuh" />
     <ClInclude Include="x16r\cuda_x16r.h" />
@@ -430,7 +434,9 @@
     <CudaCompile Include="cuda.cpp" />
     <CudaCompile Include="cuda_groestlcoin.cu" />
     <CudaCompile Include="cuda_myriadgroestl.cu" />
-    <CudaCompile Include="qubit\qubit_luffa512_alexis.cu" />
+    <CudaCompile Include="qubit\qubit_luffa512_alexis.cu">
+      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|x64'">80</MaxRegCount>
+    </CudaCompile>
     <CudaCompile Include="scrypt\blake.cu" />
     <CudaCompile Include="scrypt\keccak.cu" />
     <CudaCompile Include="scrypt\sha256.cu" />
@@ -438,7 +444,15 @@
     <CudaCompile Include="sha256\sha256d.cu" />
     <CudaCompile Include="sha256\cuda_sha256t.cu" />
     <CudaCompile Include="sha256\sha256t.cu" />
-    <CudaCompile Include="x11\cuda_x11_echo_alexis.cu" />
+    <CudaCompile Include="x11\alt_x11_simd512.cu">
+      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|x64'">112</MaxRegCount>
+    </CudaCompile>
+    <CudaCompile Include="x11\cuda_x11_cubehash512_80.cu">
+      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|x64'">80</MaxRegCount>
+    </CudaCompile>
+    <CudaCompile Include="x11\cuda_x11_echo_alexis.cu">
+      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|x64'">80</MaxRegCount>
+    </CudaCompile>
     <CudaCompile Include="x11\cuda_x11_shavite512_alexis.cu" />
     <CudaCompile Include="x13\cuda_x13_fugue512_alexis.cu" />
     <CudaCompile Include="x13\cuda_x13_hamsi512_alexis.cu">
@@ -526,6 +540,7 @@
       <AdditionalOptions Condition="'$(Configuration)'=='Debug'">-Xptxas "-abi=yes" %(AdditionalOptions)</AdditionalOptions>
     </CudaCompile>
     <CudaCompile Include="quark\cuda_quark_groestl512.cu">
+      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|x64'">112</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="quark\cuda_quark_keccak512.cu">
       <MaxRegCount>88</MaxRegCount>
@@ -561,7 +576,9 @@
     </CudaCompile>
     <CudaCompile Include="tribus\tribus.cu" />
     <ClInclude Include="x11\cuda_x11_aes.cuh" />
-    <CudaCompile Include="x11\cuda_x11_cubehash512.cu" />
+    <CudaCompile Include="x11\cuda_x11_cubehash512.cu">
+      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|x64'">80</MaxRegCount>
+    </CudaCompile>
     <CudaCompile Include="x11\cuda_x11_echo.cu">
     </CudaCompile>
     <CudaCompile Include="x11\cuda_x11_luffa512.cu" />
@@ -574,6 +591,7 @@
     <ClInclude Include="x11\cuda_x11_simd512_func.cuh" />
     <CudaCompile Include="x11\cuda_x11_simd512.cu">
       <MaxRegCount>64</MaxRegCount>
+      <MaxRegCount Condition="'$(Configuration)|$(Platform)'=='Release|x64'">112</MaxRegCount>
     </CudaCompile>
     <CudaCompile Include="x11\cuda_streebog.cu" />
     <CudaCompile Include="x11\cuda_streebog_maxwell.cu" />

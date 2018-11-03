@@ -3,7 +3,6 @@
 
 #include "cuda_helper.h"
 #include "miner.h"
-extern cudaStream_t streamk[MAX_GPUS];
 
 // ZR5
 __constant__ uint32_t d_OriginalData[20];
@@ -40,7 +39,7 @@ keccak_block(uint64_t *s, const uint32_t *in, const uint64_t *keccak_round_const
 	uint64_t t[5], u[5], v, w;
 
 	/* absorb input */
-	#pragma unroll 9
+#pragma unroll 9
 	for (i = 0; i < 72 / 8; i++, in += 2)
 		s[i] ^= U32TO64_LE(in);
 
@@ -67,35 +66,35 @@ keccak_block(uint64_t *s, const uint32_t *in, const uint64_t *keccak_round_const
 		s[4] ^= u[4]; s[9] ^= u[4]; s[14] ^= u[4]; s[19] ^= u[4]; s[24] ^= u[4];
 
 		/* rho pi: b[..] = rotl(a[..], ..) */
-		v = s[ 1];
-		s[ 1] = ROTL64(s[ 6], 44);
-		s[ 6] = ROTL64(s[ 9], 20);
-		s[ 9] = ROTL64(s[22], 61);
+		v = s[1];
+		s[1] = ROTL64(s[6], 44);
+		s[6] = ROTL64(s[9], 20);
+		s[9] = ROTL64(s[22], 61);
 		s[22] = ROTL64(s[14], 39);
 		s[14] = ROTL64(s[20], 18);
-		s[20] = ROTL64(s[ 2], 62);
-		s[ 2] = ROTL64(s[12], 43);
+		s[20] = ROTL64(s[2], 62);
+		s[2] = ROTL64(s[12], 43);
 		s[12] = ROTL64(s[13], 25);
-		s[13] = ROTL64(s[19],  8);
+		s[13] = ROTL64(s[19], 8);
 		s[19] = ROTL64(s[23], 56);
 		s[23] = ROTL64(s[15], 41);
-		s[15] = ROTL64(s[ 4], 27);
-		s[ 4] = ROTL64(s[24], 14);
-		s[24] = ROTL64(s[21],  2);
-		s[21] = ROTL64(s[ 8], 55);
-		s[ 8] = ROTL64(s[16], 45);
-		s[16] = ROTL64(s[ 5], 36);
-		s[ 5] = ROTL64(s[ 3], 28);
-		s[ 3] = ROTL64(s[18], 21);
+		s[15] = ROTL64(s[4], 27);
+		s[4] = ROTL64(s[24], 14);
+		s[24] = ROTL64(s[21], 2);
+		s[21] = ROTL64(s[8], 55);
+		s[8] = ROTL64(s[16], 45);
+		s[16] = ROTL64(s[5], 36);
+		s[5] = ROTL64(s[3], 28);
+		s[3] = ROTL64(s[18], 21);
 		s[18] = ROTL64(s[17], 15);
 		s[17] = ROTL64(s[11], 10);
-		s[11] = ROTL64(s[ 7],  6);
-		s[ 7] = ROTL64(s[10],  3);
-		s[10] = ROTL64(    v,  1);
+		s[11] = ROTL64(s[7], 6);
+		s[7] = ROTL64(s[10], 3);
+		s[10] = ROTL64(v, 1);
 
 		/* chi: a[i,j] ^= ~b[i,j+1] & b[i,j+2] */
-		v = s[ 0]; w = s[ 1]; s[ 0] ^= (~w) & s[ 2]; s[ 1] ^= (~s[ 2]) & s[ 3]; s[ 2] ^= (~s[ 3]) & s[ 4]; s[ 3] ^= (~s[ 4]) & v; s[ 4] ^= (~v) & w;
-		v = s[ 5]; w = s[ 6]; s[ 5] ^= (~w) & s[ 7]; s[ 6] ^= (~s[ 7]) & s[ 8]; s[ 7] ^= (~s[ 8]) & s[ 9]; s[ 8] ^= (~s[ 9]) & v; s[ 9] ^= (~v) & w;
+		v = s[0]; w = s[1]; s[0] ^= (~w) & s[2]; s[1] ^= (~s[2]) & s[3]; s[2] ^= (~s[3]) & s[4]; s[3] ^= (~s[4]) & v; s[4] ^= (~v) & w;
+		v = s[5]; w = s[6]; s[5] ^= (~w) & s[7]; s[6] ^= (~s[7]) & s[8]; s[7] ^= (~s[8]) & s[9]; s[8] ^= (~s[9]) & v; s[9] ^= (~v) & w;
 		v = s[10]; w = s[11]; s[10] ^= (~w) & s[12]; s[11] ^= (~s[12]) & s[13]; s[12] ^= (~s[13]) & s[14]; s[13] ^= (~s[14]) & v; s[14] ^= (~v) & w;
 		v = s[15]; w = s[16]; s[15] ^= (~w) & s[17]; s[16] ^= (~s[17]) & s[18]; s[17] ^= (~s[18]) & s[19]; s[18] ^= (~s[19]) & v; s[19] ^= (~v) & w;
 		v = s[20]; w = s[21]; s[20] ^= (~w) & s[22]; s[21] ^= (~s[22]) & s[23]; s[22] ^= (~s[23]) & s[24]; s[23] ^= (~s[24]) & v; s[24] ^= (~v) & w;
@@ -110,9 +109,10 @@ __host__
 void jackpot_keccak512_cpu_init(int thr_id, uint32_t threads)
 {
 	// Kopiere die Hash-Tabellen in den GPU-Speicher
-//	cudaMemcpyToSymbol(c_keccak_round_constants, host_keccak_round_constants, sizeof(host_keccak_round_constants), 0, cudaMemcpyHostToDevice);
-
-	cudaMemcpyToSymbol( c_keccak_round_constants, host_keccak_round_constants, sizeof(host_keccak_round_constants), 0, cudaMemcpyHostToDevice);
+	cudaMemcpyToSymbol(c_keccak_round_constants,
+		host_keccak_round_constants,
+		sizeof(host_keccak_round_constants),
+		0, cudaMemcpyHostToDevice);
 }
 
 #define cKeccakB    1600
@@ -122,18 +122,18 @@ void jackpot_keccak512_cpu_init(int thr_id, uint32_t threads)
 #define crypto_hash_BYTES 64
 
 #if (cKeccakB == 1600)
-	typedef unsigned long long UINT64;
-	typedef UINT64 tKeccakLane;
-	#define cKeccakNumberOfRounds 24
+typedef unsigned long long UINT64;
+typedef UINT64 tKeccakLane;
+#define cKeccakNumberOfRounds 24
 #endif
 
 #define cKeccakLaneSizeInBits   (sizeof(tKeccakLane) * 8)
 
 #define ROL(a, offset) ((((tKeccakLane)a) << ((offset) % cKeccakLaneSizeInBits)) ^ (((tKeccakLane)a) >> (cKeccakLaneSizeInBits-((offset) % cKeccakLaneSizeInBits))))
 #if ((cKeccakB/25) == 8)
-	#define ROL_mult8(a, offset) ((tKeccakLane)a)
+#define ROL_mult8(a, offset) ((tKeccakLane)a)
 #else
-	#define ROL_mult8(a, offset) ROL(a, offset)
+#define ROL_mult8(a, offset) ROL(a, offset)
 #endif
 
 const tKeccakLane KeccakF_RoundConstants[cKeccakNumberOfRounds] = {
@@ -156,13 +156,13 @@ const tKeccakLane KeccakF_RoundConstants[cKeccakNumberOfRounds] = {
 	(tKeccakLane)0x8000000000008002ULL,
 	(tKeccakLane)0x8000000000000080ULL
 #if (cKeccakB >= 400)
-  , (tKeccakLane)0x000000000000800aULL,
+	, (tKeccakLane)0x000000000000800aULL,
 	(tKeccakLane)0x800000008000000aULL
 #if (cKeccakB >= 800)
-  , (tKeccakLane)0x8000000080008081ULL,
+	, (tKeccakLane)0x8000000080008081ULL,
 	(tKeccakLane)0x8000000000008080ULL
 #if (cKeccakB == 1600)
-  , (tKeccakLane)0x0000000080000001ULL,
+	, (tKeccakLane)0x0000000080000001ULL,
 	(tKeccakLane)0x8000000080008008ULL
 #endif
 #endif
@@ -171,7 +171,7 @@ const tKeccakLane KeccakF_RoundConstants[cKeccakNumberOfRounds] = {
 
 void KeccakF(tKeccakLane * state, const tKeccakLane *in, int laneCount)
 {
-	while ( --laneCount >= 0 ) {
+	while (--laneCount >= 0) {
 		state[laneCount] ^= in[laneCount];
 	}
 
@@ -188,19 +188,19 @@ void KeccakF(tKeccakLane * state, const tKeccakLane *in, int laneCount)
 		tKeccakLane Eka, Eke, Eki, Eko, Eku;
 		tKeccakLane Ema, Eme, Emi, Emo, Emu;
 		tKeccakLane Esa, Ese, Esi, Eso, Esu;
-		#define    round    laneCount
+#define    round    laneCount
 
 		//copyFromState(A, state)
-		Aba = state[ 0];
-		Abe = state[ 1];
-		Abi = state[ 2];
-		Abo = state[ 3];
-		Abu = state[ 4];
-		Aga = state[ 5];
-		Age = state[ 6];
-		Agi = state[ 7];
-		Ago = state[ 8];
-		Agu = state[ 9];
+		Aba = state[0];
+		Abe = state[1];
+		Abi = state[2];
+		Abo = state[3];
+		Abu = state[4];
+		Aga = state[5];
+		Age = state[6];
+		Agi = state[7];
+		Ago = state[8];
+		Agu = state[9];
 		Aka = state[10];
 		Ake = state[11];
 		Aki = state[12];
@@ -217,7 +217,7 @@ void KeccakF(tKeccakLane * state, const tKeccakLane *in, int laneCount)
 		Aso = state[23];
 		Asu = state[24];
 
-		for( round = 0; round < cKeccakNumberOfRounds; round += 2 )
+		for (round = 0; round < cKeccakNumberOfRounds; round += 2)
 		{
 			//    prepareTheta
 			BCa = Aba^Aga^Aka^Ama^Asa;
@@ -243,44 +243,44 @@ void KeccakF(tKeccakLane * state, const tKeccakLane *in, int laneCount)
 			BCo = ROL(Amo, 21);
 			Asu ^= Du;
 			BCu = ROL(Asu, 14);
-			Eba =   BCa ^((~BCe)&  BCi );
+			Eba = BCa ^ ((~BCe)&  BCi);
 			Eba ^= (tKeccakLane)KeccakF_RoundConstants[round];
-			Ebe =   BCe ^((~BCi)&  BCo );
-			Ebi =   BCi ^((~BCo)&  BCu );
-			Ebo =   BCo ^((~BCu)&  BCa );
-			Ebu =   BCu ^((~BCa)&  BCe );
+			Ebe = BCe ^ ((~BCi)&  BCo);
+			Ebi = BCi ^ ((~BCo)&  BCu);
+			Ebo = BCo ^ ((~BCu)&  BCa);
+			Ebu = BCu ^ ((~BCa)&  BCe);
 
 			Abo ^= Do;
 			BCa = ROL(Abo, 28);
 			Agu ^= Du;
 			BCe = ROL(Agu, 20);
 			Aka ^= Da;
-			BCi = ROL(Aka,  3);
+			BCi = ROL(Aka, 3);
 			Ame ^= De;
 			BCo = ROL(Ame, 45);
 			Asi ^= Di;
 			BCu = ROL(Asi, 61);
-			Ega =   BCa ^((~BCe)&  BCi );
-			Ege =   BCe ^((~BCi)&  BCo );
-			Egi =   BCi ^((~BCo)&  BCu );
-			Ego =   BCo ^((~BCu)&  BCa );
-			Egu =   BCu ^((~BCa)&  BCe );
+			Ega = BCa ^ ((~BCe)&  BCi);
+			Ege = BCe ^ ((~BCi)&  BCo);
+			Egi = BCi ^ ((~BCo)&  BCu);
+			Ego = BCo ^ ((~BCu)&  BCa);
+			Egu = BCu ^ ((~BCa)&  BCe);
 
 			Abe ^= De;
-			BCa = ROL(Abe,  1);
+			BCa = ROL(Abe, 1);
 			Agi ^= Di;
-			BCe = ROL(Agi,  6);
+			BCe = ROL(Agi, 6);
 			Ako ^= Do;
 			BCi = ROL(Ako, 25);
 			Amu ^= Du;
-			BCo = ROL_mult8(Amu,  8);
+			BCo = ROL_mult8(Amu, 8);
 			Asa ^= Da;
 			BCu = ROL(Asa, 18);
-			Eka =   BCa ^((~BCe)&  BCi );
-			Eke =   BCe ^((~BCi)&  BCo );
-			Eki =   BCi ^((~BCo)&  BCu );
-			Eko =   BCo ^((~BCu)&  BCa );
-			Eku =   BCu ^((~BCa)&  BCe );
+			Eka = BCa ^ ((~BCe)&  BCi);
+			Eke = BCe ^ ((~BCi)&  BCo);
+			Eki = BCi ^ ((~BCo)&  BCu);
+			Eko = BCo ^ ((~BCu)&  BCa);
+			Eku = BCu ^ ((~BCa)&  BCe);
 
 			Abu ^= Du;
 			BCa = ROL(Abu, 27);
@@ -292,11 +292,11 @@ void KeccakF(tKeccakLane * state, const tKeccakLane *in, int laneCount)
 			BCo = ROL(Ami, 15);
 			Aso ^= Do;
 			BCu = ROL_mult8(Aso, 56);
-			Ema =   BCa ^((~BCe)&  BCi );
-			Eme =   BCe ^((~BCi)&  BCo );
-			Emi =   BCi ^((~BCo)&  BCu );
-			Emo =   BCo ^((~BCu)&  BCa );
-			Emu =   BCu ^((~BCa)&  BCe );
+			Ema = BCa ^ ((~BCe)&  BCi);
+			Eme = BCe ^ ((~BCi)&  BCo);
+			Emi = BCi ^ ((~BCo)&  BCu);
+			Emo = BCo ^ ((~BCu)&  BCa);
+			Emu = BCu ^ ((~BCa)&  BCe);
 
 			Abi ^= Di;
 			BCa = ROL(Abi, 62);
@@ -307,12 +307,12 @@ void KeccakF(tKeccakLane * state, const tKeccakLane *in, int laneCount)
 			Ama ^= Da;
 			BCo = ROL(Ama, 41);
 			Ase ^= De;
-			BCu = ROL(Ase,  2);
-			Esa =   BCa ^((~BCe)&  BCi );
-			Ese =   BCe ^((~BCi)&  BCo );
-			Esi =   BCi ^((~BCo)&  BCu );
-			Eso =   BCo ^((~BCu)&  BCa );
-			Esu =   BCu ^((~BCa)&  BCe );
+			BCu = ROL(Ase, 2);
+			Esa = BCa ^ ((~BCe)&  BCi);
+			Ese = BCe ^ ((~BCi)&  BCo);
+			Esi = BCi ^ ((~BCo)&  BCu);
+			Eso = BCo ^ ((~BCu)&  BCa);
+			Esu = BCu ^ ((~BCa)&  BCe);
 
 			//    prepareTheta
 			BCa = Eba^Ega^Eka^Ema^Esa;
@@ -338,12 +338,12 @@ void KeccakF(tKeccakLane * state, const tKeccakLane *in, int laneCount)
 			BCo = ROL(Emo, 21);
 			Esu ^= Du;
 			BCu = ROL(Esu, 14);
-			Aba =   BCa ^((~BCe)&  BCi );
-			Aba ^= (tKeccakLane)KeccakF_RoundConstants[round+1];
-			Abe =   BCe ^((~BCi)&  BCo );
-			Abi =   BCi ^((~BCo)&  BCu );
-			Abo =   BCo ^((~BCu)&  BCa );
-			Abu =   BCu ^((~BCa)&  BCe );
+			Aba = BCa ^ ((~BCe)&  BCi);
+			Aba ^= (tKeccakLane)KeccakF_RoundConstants[round + 1];
+			Abe = BCe ^ ((~BCi)&  BCo);
+			Abi = BCi ^ ((~BCo)&  BCu);
+			Abo = BCo ^ ((~BCu)&  BCa);
+			Abu = BCu ^ ((~BCa)&  BCe);
 
 			Ebo ^= Do;
 			BCa = ROL(Ebo, 28);
@@ -355,11 +355,11 @@ void KeccakF(tKeccakLane * state, const tKeccakLane *in, int laneCount)
 			BCo = ROL(Eme, 45);
 			Esi ^= Di;
 			BCu = ROL(Esi, 61);
-			Aga =   BCa ^((~BCe)&  BCi );
-			Age =   BCe ^((~BCi)&  BCo );
-			Agi =   BCi ^((~BCo)&  BCu );
-			Ago =   BCo ^((~BCu)&  BCa );
-			Agu =   BCu ^((~BCa)&  BCe );
+			Aga = BCa ^ ((~BCe)&  BCi);
+			Age = BCe ^ ((~BCi)&  BCo);
+			Agi = BCi ^ ((~BCo)&  BCu);
+			Ago = BCo ^ ((~BCu)&  BCa);
+			Agu = BCu ^ ((~BCa)&  BCe);
 
 			Ebe ^= De;
 			BCa = ROL(Ebe, 1);
@@ -371,11 +371,11 @@ void KeccakF(tKeccakLane * state, const tKeccakLane *in, int laneCount)
 			BCo = ROL_mult8(Emu, 8);
 			Esa ^= Da;
 			BCu = ROL(Esa, 18);
-			Aka =   BCa ^((~BCe)&  BCi );
-			Ake =   BCe ^((~BCi)&  BCo );
-			Aki =   BCi ^((~BCo)&  BCu );
-			Ako =   BCo ^((~BCu)&  BCa );
-			Aku =   BCu ^((~BCa)&  BCe );
+			Aka = BCa ^ ((~BCe)&  BCi);
+			Ake = BCe ^ ((~BCi)&  BCo);
+			Aki = BCi ^ ((~BCo)&  BCu);
+			Ako = BCo ^ ((~BCu)&  BCa);
+			Aku = BCu ^ ((~BCa)&  BCe);
 
 			Ebu ^= Du;
 			BCa = ROL(Ebu, 27);
@@ -387,11 +387,11 @@ void KeccakF(tKeccakLane * state, const tKeccakLane *in, int laneCount)
 			BCo = ROL(Emi, 15);
 			Eso ^= Do;
 			BCu = ROL_mult8(Eso, 56);
-			Ama =   BCa ^((~BCe)&  BCi );
-			Ame =   BCe ^((~BCi)&  BCo );
-			Ami =   BCi ^((~BCo)&  BCu );
-			Amo =   BCo ^((~BCu)&  BCa );
-			Amu =   BCu ^((~BCa)&  BCe );
+			Ama = BCa ^ ((~BCe)&  BCi);
+			Ame = BCe ^ ((~BCi)&  BCo);
+			Ami = BCi ^ ((~BCo)&  BCu);
+			Amo = BCo ^ ((~BCu)&  BCa);
+			Amu = BCu ^ ((~BCa)&  BCe);
 
 			Ebi ^= Di;
 			BCa = ROL(Ebi, 62);
@@ -403,24 +403,24 @@ void KeccakF(tKeccakLane * state, const tKeccakLane *in, int laneCount)
 			BCo = ROL(Ema, 41);
 			Ese ^= De;
 			BCu = ROL(Ese, 2);
-			Asa =   BCa ^((~BCe)&  BCi );
-			Ase =   BCe ^((~BCi)&  BCo );
-			Asi =   BCi ^((~BCo)&  BCu );
-			Aso =   BCo ^((~BCu)&  BCa );
-			Asu =   BCu ^((~BCa)&  BCe );
+			Asa = BCa ^ ((~BCe)&  BCi);
+			Ase = BCe ^ ((~BCi)&  BCo);
+			Asi = BCi ^ ((~BCo)&  BCu);
+			Aso = BCo ^ ((~BCu)&  BCa);
+			Asu = BCu ^ ((~BCa)&  BCe);
 		}
 
 		//copyToState(state, A)
-		state[ 0] = Aba;
-		state[ 1] = Abe;
-		state[ 2] = Abi;
-		state[ 3] = Abo;
-		state[ 4] = Abu;
-		state[ 5] = Aga;
-		state[ 6] = Age;
-		state[ 7] = Agi;
-		state[ 8] = Ago;
-		state[ 9] = Agu;
+		state[0] = Aba;
+		state[1] = Abe;
+		state[2] = Abi;
+		state[3] = Abo;
+		state[4] = Abu;
+		state[5] = Aga;
+		state[6] = Age;
+		state[7] = Agi;
+		state[8] = Ago;
+		state[9] = Agu;
 		state[10] = Aka;
 		state[11] = Ake;
 		state[12] = Aki;
@@ -437,45 +437,48 @@ void KeccakF(tKeccakLane * state, const tKeccakLane *in, int laneCount)
 		state[23] = Aso;
 		state[24] = Asu;
 
-		#undef    round
+#undef    round
 	}
 }
 
 // inlen kann 72...143 betragen
 __host__
-void jackpot_keccak512_cpu_setBlock(int thr_id, void *pdata, size_t inlen)
+void jackpot_keccak512_cpu_setBlock(void *pdata, size_t inlen)
 {
 	const unsigned char *in = (const unsigned char*)pdata;
 
 	tKeccakLane state[5 * 5];
 	unsigned char temp[cKeccakR_SizeInBytes];
 
-	memset( state, 0, sizeof(state) );
+	memset(state, 0, sizeof(state));
 
 	for ( /* empty */; inlen >= cKeccakR_SizeInBytes; inlen -= cKeccakR_SizeInBytes, in += cKeccakR_SizeInBytes)
 	{
-		KeccakF( state, (const tKeccakLane*)in, cKeccakR_SizeInBytes / sizeof(tKeccakLane) );
+		KeccakF(state, (const tKeccakLane*)in, cKeccakR_SizeInBytes / sizeof(tKeccakLane));
 	}
 
 	// Copy state of the first round (72 Bytes)
 	// in Constant Memory
-//	cudaMemcpy(c_State, state, sizeof(state), cudaMemcpyHostToDevice);
-	cudaMemcpyToSymbolAsync(c_State, state, sizeof(state), 0, cudaMemcpyHostToDevice, 0);
-//	cudaMemcpyToSymbolAsync(c_State, state, sizeof(state), 0, cudaMemcpyHostToDevice, streamk[thr_id]);
+	cudaMemcpyToSymbol(c_State,
+		state,
+		sizeof(state),
+		0, cudaMemcpyHostToDevice);
 
 	// second part
 	memcpy(temp, in, inlen);
 	temp[inlen++] = 1;
 	memset(temp + inlen, 0, cKeccakR_SizeInBytes - inlen);
-	temp[cKeccakR_SizeInBytes-1] |= 0x80;
+	temp[cKeccakR_SizeInBytes - 1] |= 0x80;
 
 	// Copy rest of the message in constant memory
-	cudaMemcpyToSymbolAsync(c_PaddedMessage, temp, cKeccakR_SizeInBytes, 0, cudaMemcpyHostToDevice, 0);
-//	cudaMemcpyToSymbolAsync(c_PaddedMessage, temp, cKeccakR_SizeInBytes, 0, cudaMemcpyHostToDevice, streamk[thr_id]);
+	cudaMemcpyToSymbol(c_PaddedMessage,
+		temp,
+		cKeccakR_SizeInBytes,
+		0, cudaMemcpyHostToDevice);
 }
 
 __global__
-void jackpot_keccak512_gpu_hash(uint32_t threads, uint32_t startNounce, uint64_t *g_hash, volatile int *order)
+void jackpot_keccak512_gpu_hash(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -485,51 +488,48 @@ void jackpot_keccak512_gpu_hash(uint32_t threads, uint32_t startNounce, uint64_t
 		int hashPosition = nounce - startNounce;
 
 		uint32_t message[18];
-		#pragma unroll 18
-		for(int i=0;i<18;i++)
+#pragma unroll 18
+		for (int i = 0; i<18; i++)
 			message[i] = c_PaddedMessage[i];
 
 		message[1] = cuda_swab32(nounce);
 
 		// State init
 		uint64_t keccak_gpu_state[25];
-		#pragma unroll 25
-		for (int i=0; i<25; i++)
+#pragma unroll 25
+		for (int i = 0; i<25; i++)
 			keccak_gpu_state[i] = c_State[i];
 
 		// den Block einmal gut durchschütteln
 		keccak_block(keccak_gpu_state, message, c_keccak_round_constants);
-#ifdef A1MIN3R_MOD
-		if (*order) { return; }
-#endif
+
 		uint32_t hash[16];
 
-		#pragma unroll 8
+#pragma unroll 8
 		for (size_t i = 0; i < 64; i += 8) {
-			U64TO32_LE((&hash[i >> 2]), keccak_gpu_state[i >> 3]);
+			U64TO32_LE((&hash[i / 4]), keccak_gpu_state[i / 8]);
 		}
 
 		// copy hash
-		uint32_t *outpHash = (uint32_t*)&g_hash[hashPosition << 3];
+		uint32_t *outpHash = (uint32_t*)&g_hash[8 * hashPosition];
 
-		#pragma unroll 16
-		for(int i=0;i<16;i++)
+#pragma unroll 16
+		for (int i = 0; i<16; i++)
 			outpHash[i] = hash[i];
 	}
 }
 
 __host__
-void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, volatile int *order)
+void jackpot_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, uint32_t *d_hash, int order)
 {
 	const uint32_t threadsperblock = 256;
 
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
 	size_t shared_size = 0;
 
-	jackpot_keccak512_gpu_hash << <grid, block, shared_size>> >(threads, startNounce, (uint64_t*)d_hash, order);
-//	jackpot_keccak512_gpu_hash << <grid, block, shared_size, streamk[thr_id] >> >(threads, startNounce, (uint64_t*)d_hash);
+	jackpot_keccak512_gpu_hash << <grid, block, shared_size >> >(threads, startNounce, (uint64_t*)d_hash);
 	//MyStreamSynchronize(NULL, order, thr_id);
 }
 
@@ -545,25 +545,25 @@ void zr5_keccak512_gpu_hash(uint32_t threads, uint32_t startNounce, uint64_t *g_
 		uint32_t nounce = startNounce + thread;
 		uint32_t message[18];
 
-		#pragma unroll 18
-		for(int i=0; i<18; i++)
+#pragma unroll 18
+		for (int i = 0; i<18; i++)
 			message[i] = c_PaddedMessage[i];
 
 		message[1] = nounce;
 
 		// Get mid-state
 		uint64_t keccak_gpu_state[25];
-		#pragma unroll 25
-		for (int i=0; i<25; i++)
+#pragma unroll 25
+		for (int i = 0; i<25; i++)
 			keccak_gpu_state[i] = c_State[i];
 
 		keccak_block(keccak_gpu_state, message, c_keccak_round_constants);
 
 		uint32_t hash[16];
 
-		#pragma unroll 8
+#pragma unroll 8
 		for (int i = 0; i < 8; i++) {
-			U64TO32_LE((&hash[i*2]), keccak_gpu_state[i]);
+			U64TO32_LE((&hash[i * 2]), keccak_gpu_state[i]);
 		}
 
 		// Output (64 bytes hash required)
@@ -573,8 +573,8 @@ void zr5_keccak512_gpu_hash(uint32_t threads, uint32_t startNounce, uint64_t *g_
 		//for(int i=0; i<16; i++)
 		//	outpHash[i] = hash[i];
 
-		uint4 *outpHash = (uint4*) (&g_hash[hashPosition*8]);
-		uint4 *psrc = (uint4*) hash;
+		uint4 *outpHash = (uint4*)(&g_hash[hashPosition * 8]);
+		uint4 *psrc = (uint4*)hash;
 		outpHash[0] = psrc[0];
 		outpHash[1] = psrc[1];
 		outpHash[2] = psrc[2];
@@ -587,10 +587,10 @@ void zr5_keccak512_cpu_hash(int thr_id, uint32_t threads, uint32_t startNounce, 
 {
 	const uint32_t threadsperblock = 256;
 
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
-	zr5_keccak512_gpu_hash<<<grid, block>>>(threads, startNounce, (uint64_t*)d_hash);
+	zr5_keccak512_gpu_hash << <grid, block >> >(threads, startNounce, (uint64_t*)d_hash);
 	//MyStreamSynchronize(NULL, 0, thr_id);
 }
 
@@ -606,11 +606,11 @@ void zr5_keccak512_gpu_hash_pok(uint32_t threads, uint32_t startNounce, uint32_t
 
 		uint32_t message[18]; /* 72 bytes */
 
-		// pok - hash[0] from prev hash
+							  // pok - hash[0] from prev hash
 		message[0] = version | (0x10000UL * d_poks[thread]);
-		#pragma unroll
-		for (int i=1; i<18; i++) {
-			message[i]=d_OriginalData[i];
+#pragma unroll
+		for (int i = 1; i<18; i++) {
+			message[i] = d_OriginalData[i];
 		}
 
 		// first bloc
@@ -622,8 +622,8 @@ void zr5_keccak512_gpu_hash_pok(uint32_t threads, uint32_t startNounce, uint32_t
 		message[1] = nounce; //cuda_swab32(nounce);
 		message[2] = 1;
 
-		#pragma unroll
-		for(int i=3; i<17; i++)
+#pragma unroll
+		for (int i = 3; i<17; i++)
 			message[i] = 0;
 
 		message[17] = 0x80000000UL;
@@ -632,9 +632,9 @@ void zr5_keccak512_gpu_hash_pok(uint32_t threads, uint32_t startNounce, uint32_t
 
 		uint32_t hash[16];
 
-		#pragma unroll 8
+#pragma unroll 8
 		for (size_t i = 0; i < 8; i++) {
-			U64TO32_LE((&hash[i*2]), keccak_gpu_state[i]);
+			U64TO32_LE((&hash[i * 2]), keccak_gpu_state[i]);
 		}
 
 		//uint32_t *outpHash = &g_hash[thread * 16];
@@ -642,8 +642,8 @@ void zr5_keccak512_gpu_hash_pok(uint32_t threads, uint32_t startNounce, uint32_t
 		//for(int i=0; i<16; i++)
 		//	outpHash[i] = hash[i];
 
-		uint4 *outpHash = (uint4*) (&g_hash[thread * 16]);
-		uint4 *psrc = (uint4*) hash;
+		uint4 *outpHash = (uint4*)(&g_hash[thread * 16]);
+		uint4 *psrc = (uint4*)hash;
 		outpHash[0] = psrc[0];
 		outpHash[1] = psrc[1];
 		outpHash[2] = psrc[2];
@@ -657,10 +657,10 @@ void zr5_keccak512_cpu_hash_pok(int thr_id, uint32_t threads, uint32_t startNoun
 	const uint32_t threadsperblock = 256;
 	const uint32_t version = (pdata[0] & (~POK_DATA_MASK)) | (use_pok ? POK_BOOL_MASK : 0);
 
-	dim3 grid((threads + threadsperblock-1)/threadsperblock);
+	dim3 grid((threads + threadsperblock - 1) / threadsperblock);
 	dim3 block(threadsperblock);
 
 	cudaMemcpyToSymbol(d_OriginalData, pdata, sizeof(d_OriginalData), 0, cudaMemcpyHostToDevice);
-	zr5_keccak512_gpu_hash_pok<<<grid, block>>>(threads, startNounce, d_hash, d_poks, version);
+	zr5_keccak512_gpu_hash_pok << <grid, block >> >(threads, startNounce, d_hash, d_poks, version);
 	//MyStreamSynchronize(NULL, 10, thr_id);
 }

@@ -6,6 +6,7 @@
 //#include <cuda_helper.h>
 #include "miner.h"
 #include "cuda_helper_alexis.h"
+#include "cuda_vectors_alexis.h"
 
 // #include <stdio.h>  // printf
 // #include <unistd.h> // sleep
@@ -277,7 +278,7 @@ static void E8(uint32_t x[8][4])
 }
 
 __global__
-//__launch_bounds__(256,2)
+__launch_bounds__(256,3)
 void quark_jh512_gpu_hash_64(const uint32_t threads, uint32_t* g_hash, volatile int *order)
 {
 #ifdef A1MIN3R_MOD
@@ -303,10 +304,14 @@ void quark_jh512_gpu_hash_64(const uint32_t threads, uint32_t* g_hash, volatile 
 		uint32_t *Hash = &g_hash[hashPosition << 4];
 
 		uint32_t h[16];
+		/*
 		AS_UINT4(&h[ 0]) = AS_UINT4(&Hash[ 0]);
 		AS_UINT4(&h[ 4]) = AS_UINT4(&Hash[ 4]);
 		AS_UINT4(&h[ 8]) = AS_UINT4(&Hash[ 8]);
 		AS_UINT4(&h[12]) = AS_UINT4(&Hash[12]);
+		*/
+		*(uint2x4*)&h[0] = __ldg4((uint2x4*)&Hash[0]);
+		*(uint2x4*)&h[8] = __ldg4((uint2x4*)&Hash[8]);
 #if 0
 		uint32_t x[8][4] = { /* init */
 			{ 0x964bd16f, 0x17aa003e, 0x052e6a63, 0x43d5157a },
@@ -340,11 +345,14 @@ void quark_jh512_gpu_hash_64(const uint32_t threads, uint32_t* g_hash, volatile 
 
 		x[4][0] ^= 0x80U;
 		x[7][3] ^= 0x00020000U;
-
+/*
 		AS_UINT4(&Hash[ 0]) = AS_UINT4(&x[4][0]);
 		AS_UINT4(&Hash[ 4]) = AS_UINT4(&x[5][0]);
 		AS_UINT4(&Hash[ 8]) = AS_UINT4(&x[6][0]);
 		AS_UINT4(&Hash[12]) = AS_UINT4(&x[7][0]);
+*/
+		*(uint2x4*)&Hash[0] = *(uint2x4*)&x[4][0];
+		*(uint2x4*)&Hash[8] = *(uint2x4*)&x[6][0];
 	}
 }
 
@@ -458,6 +466,7 @@ __constant__ static uint32_t c_JHState[32];
 __constant__ static uint32_t c_Message[4];
 
 __global__
+__launch_bounds__(256, 5)
 void jh512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint32_t * g_outhash, volatile int *order)
 {
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -465,6 +474,7 @@ void jh512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint3
 	{
 		// 1 (precomputed state)
 		uint32_t x[8][4];
+#if 0
 		AS_UINT4(&x[0][0]) = AS_UINT4(&c_JHState[ 0]);
 		AS_UINT4(&x[1][0]) = AS_UINT4(&c_JHState[ 4]);
 		AS_UINT4(&x[2][0]) = AS_UINT4(&c_JHState[ 8]);
@@ -474,10 +484,17 @@ void jh512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint3
 		AS_UINT4(&x[5][0]) = AS_UINT4(&c_JHState[20]);
 		AS_UINT4(&x[6][0]) = AS_UINT4(&c_JHState[24]);
 		AS_UINT4(&x[7][0]) = AS_UINT4(&c_JHState[28]);
+#else
+		*(uint2x4*)&x[0][0] = __ldg4((uint2x4*)&c_JHState[0]);
+		*(uint2x4*)&x[2][0] = __ldg4((uint2x4*)&c_JHState[8]);
 
+		*(uint2x4*)&x[4][0] = __ldg4((uint2x4*)&c_JHState[16]);
+		*(uint2x4*)&x[6][0] = __ldg4((uint2x4*)&c_JHState[24]);
+#endif
 		// 2 (16 bytes with nonce)
 		uint32_t h[4];
-		AS_UINT2(&h[0]) = AS_UINT2(&c_Message[0]);
+//		AS_UINT2(&h[0]) = AS_UINT2(&c_Message[0]);
+		AS_UINT2(&h[0]) = __ldg((uint2*)&c_Message[0]);
 		h[2] = c_Message[2];
 		h[3] = cuda_swab32(startNounce + thread);
 
@@ -499,11 +516,15 @@ void jh512_gpu_hash_80(const uint32_t threads, const uint32_t startNounce, uint3
 		E8(x);
 		x[7][3] ^= 0x80020000U;
 
-		uint32_t *Hash = &g_outhash[(size_t)16 * thread];
+		uint32_t *Hash = &g_outhash[thread << 4];
+		*(uint2x4*)&Hash[0] = *(uint2x4*)&x[4][0];
+		*(uint2x4*)&Hash[8] = *(uint2x4*)&x[6][0];
+		/*
 		AS_UINT4(&Hash[ 0]) = AS_UINT4(&x[4][0]);
 		AS_UINT4(&Hash[ 4]) = AS_UINT4(&x[5][0]);
 		AS_UINT4(&Hash[ 8]) = AS_UINT4(&x[6][0]);
 		AS_UINT4(&Hash[12]) = AS_UINT4(&x[7][0]);
+		*/
 	}
 }
 

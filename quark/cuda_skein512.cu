@@ -464,6 +464,7 @@ __constant__ const uint2 buffer[112] = {
 
 __global__
 #if __CUDA_ARCH__ > 500
+//__launch_bounds__(TPB52, 3)
 __launch_bounds__(TPB52, 3)
 #else
 __launch_bounds__(TPB50, 5)
@@ -487,7 +488,7 @@ void quark_skein512_gpu_hash_64(const uint32_t threads, uint64_t* __restrict__ g
 		uint2x4 *phash = (uint2x4*)Hash;
 		*(uint2x4*)&p[0] = __ldg4(&phash[0]);
 		*(uint2x4*)&p[4] = __ldg4(&phash[1]);
-		__syncthreads();
+
 		h[0] = p[0];	h[1] = p[1];	h[2] = p[2];	h[3] = p[3];
 		h[4] = p[4];	h[5] = p[5];	h[6] = p[6];	h[7] = p[7];
 

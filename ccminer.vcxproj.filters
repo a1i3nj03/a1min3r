@@ -560,6 +560,12 @@
     </ClInclude>
     <ClInclude Include="quark\groestl_functions_quad_a1_min3r.cuh" />
     <ClInclude Include="quark\groestl_transf_quad_a1_min3r.cuh" />
+    <ClInclude Include="x11\alt_simd_fn.cuh">
+      <Filter>Source Files\CUDA\x11</Filter>
+    </ClInclude>
+    <ClInclude Include="x11\cuda_x11_aes_sp.cuh">
+      <Filter>Source Files\CUDA\x11</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="cuda.cpp">
@@ -904,6 +910,12 @@
     <CudaCompile Include="x13\cuda_x13_hamsi512_alexis.cu" />
     <CudaCompile Include="x16r\x16.cu">
       <Filter>Source Files\CUDA\x16r</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x11\alt_x11_simd512.cu">
+      <Filter>Source Files\CUDA\x11</Filter>
+    </CudaCompile>
+    <CudaCompile Include="x11\cuda_x11_cubehash512_80.cu">
+      <Filter>Source Files\CUDA\x11</Filter>
     </CudaCompile>
   </ItemGroup>
   <ItemGroup>

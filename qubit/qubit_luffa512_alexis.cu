@@ -697,9 +697,10 @@ void x11_luffa512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, volatil
 #ifdef A1MIN3R_MOD
 	if (*order) { return; }
 #endif
+
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	uint32_t statebuffer[8];
-	
+
 	if (thread < threads)
 	{
 		uint32_t statechainv[40] = {
@@ -709,53 +710,49 @@ void x11_luffa512_gpu_hash_64_alexis(uint32_t threads, uint32_t *g_hash, volatil
 			0x66e66a8a, 0x2303208f, 0x486dafb4, 0xc0d37dc6,	0x634d15af, 0xe5af6747, 0x10af7e38, 0xee7e6428,
 			0x01262e5d, 0xc92c2e64, 0x82fee966, 0xcea738d3,	0x867de2b0, 0xe0714818, 0xda6e831f, 0xa7062529
 		};
-		uint2x4* Hash = (uint2x4*)&g_hash[thread<<4];
+		uint2x4* Hash = (uint2x4*)&g_hash[thread << 4];
 
 		uint32_t hash[16];
 
 		*(uint2x4*)&hash[0] = __ldg4(&Hash[0]);
 		*(uint2x4*)&hash[8] = __ldg4(&Hash[1]);
-		__syncthreads();
-		#pragma unroll 8
-		for(int i=0;i<8;i++){
+
+#pragma unroll 8
+		for (int i = 0; i<8; i++) {
 			statebuffer[i] = cuda_swab32(hash[i]);
 		}
-		
+
 		rnd512_first(statechainv, statebuffer);
 
-		#pragma unroll 8
-		for(int i=0;i<8;i++){
-			statebuffer[i] = cuda_swab32(hash[8+i]);
+#pragma unroll 8
+		for (int i = 0; i<8; i++) {
+			statebuffer[i] = cuda_swab32(hash[8 + i]);
 		}
 
 		rnd512(statebuffer, statechainv);
-		
+
 		statebuffer[0] = 0x80000000;
-		#pragma unroll 7
-		for(uint32_t i=1;i<8;i++)
+#pragma unroll 7
+		for (uint32_t i = 1; i<8; i++)
 			statebuffer[i] = 0;
 
 		rnd512(statebuffer, statechainv);
 
-#ifdef A1MIN3R_MOD
-		if (*order) { return; }
-#endif
-
 		/*---- blank round with m=0 ----*/
 		rnd512_nullhash(statechainv);
 
-		#pragma unroll 8
-		for(int i=0;i<8;i++)
-			hash[i] = cuda_swab32(statechainv[i] ^ statechainv[i+8] ^ statechainv[i+16] ^ statechainv[i+24] ^ statechainv[i+32]);
+#pragma unroll 8
+		for (int i = 0; i<8; i++)
+			hash[i] = cuda_swab32(statechainv[i] ^ statechainv[i + 8] ^ statechainv[i + 16] ^ statechainv[i + 24] ^ statechainv[i + 32]);
 
 		rnd512_nullhash(statechainv);
 
-		#pragma unroll 8
-		for(int i=0;i<8;i++)
-			hash[8+i] = cuda_swab32(statechainv[i] ^ statechainv[i+8] ^ statechainv[i+16] ^ statechainv[i+24] ^ statechainv[i+32]);
+#pragma unroll 8
+		for (int i = 0; i<8; i++)
+			hash[8 + i] = cuda_swab32(statechainv[i] ^ statechainv[i + 8] ^ statechainv[i + 16] ^ statechainv[i + 24] ^ statechainv[i + 32]);
 
-		Hash[ 0] = *(uint2x4*)&hash[ 0];
-		Hash[ 1] = *(uint2x4*)&hash[ 8];
+		Hash[0] = *(uint2x4*)&hash[0];
+		Hash[1] = *(uint2x4*)&hash[8];
 	}
 }
 

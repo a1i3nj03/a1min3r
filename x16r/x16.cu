@@ -117,7 +117,9 @@ __host__ int ark_reset(int thr_id);
 //__constant__ int arks[MAX_GPUS];
 //__constant__ int *d_ark[MAX_GPUS] = { NULL };
 //__device__ __constant__ int d_ark[MAX_GPUS];
-
+extern int alt_x11_simd512_cpu_init(int thr_id, uint32_t threads);
+extern void alt_x11_simd512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, volatile int *order);
+#define TEST_ALGO seq//0x67452301EFCDAB89//0xffffffffffffffff
 static void(*pAlgo64[16])(int, uint32_t, uint32_t*, volatile int*) =
 {
 	quark_blake512_cpu_hash_64,		//2,//TOP_SPEED,	//18.0 > 14 //60
@@ -129,7 +131,11 @@ static void(*pAlgo64[16])(int, uint32_t, uint32_t*, volatile int*) =
 	x11_luffa512_cpu_hash_64_alexis,//2,//MID_SPEED,	//13   > 18 //32.1
 	x11_cubehash512_cpu_hash_64,	//3,//LOW_SPEED,	//7.4  > 18 //17
 	x11_shavite512_cpu_hash_64_alexis,//3,LOW_SPEED,	//8    > 18 //14.82
+#if 0
 	x11_simd512_cpu_hash_64,		//3,//MIN_SPEED,	//3.5  > 18 //6.08
+#else
+	alt_x11_simd512_cpu_hash_64,		//3,//MIN_SPEED,	//3.5  > 18 //6.08
+#endif
 	x11_echo512_cpu_hash_64_alexis,	//3,//LOW_SPEED,	//4    > 18 //8.7
 	x13_hamsi512_cpu_hash_64_alexis,//3,//LOW_SPEED,	//5.1  > 18 //10.6
 	x13_fugue512_cpu_hash_64_alexis,//3,//LOW_SPEED,	//6.7  > 19 //11.6
@@ -346,7 +352,7 @@ __global__ void set_lo(int *ark)
 #define MID_SPEED 1
 #define LOW_SPEED 3
 #define MIN_SPEED 6
-#define SIMD_MAX (1 << 21)//(3 << 19)
+#define SIMD_MAX (1 << 31)//(1 << 21)//(3 << 19)
 uint8_t target_table[16] =
 {
 	//18 ,21 ,2.5,8 ,24 ,27 ,13,7.5,8 ,3.5,4 ,5 ,6.5,39,7 ,28.5
@@ -377,6 +383,7 @@ static uint32_t max_throughput = 0;
 
 void target_throughput(uint64_t target, uint32_t &throughput)
 {
+#if 0
 	bool simd = 0;
 	uint32_t t = throughput;
 	int avg = target_table[(target >> 60) & 0x0f];
@@ -430,7 +437,9 @@ void target_throughput(uint64_t target, uint32_t &throughput)
 	throughput = (simd && (throughput >(SIMD_MAX))) ? SIMD_MAX : throughput;
 	throughput = (throughput) ? throughput : 0x1000;
 	throughput = (throughput <= max_throughput)? throughput : max_throughput;
+#endif
 }
+//static uint32_t *test_hash = NULL;
 
 extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 {
@@ -445,8 +454,11 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 		}
 
 		max_throughput = throughput;
-		if (max_throughput > (1 << 21))
-			throughput = 1 << 21;
+//		if (max_throughput > (1 << 21))
+//			throughput = 1 << 21;
+#if 1
+		CUDA_SAFE_CALL(cudaMalloc(&d_hash[thr_id], (size_t)64 * throughput));
+#else
 		while (cudaMalloc(&d_hash[thr_id], (size_t)64 * throughput) != cudaSuccess)
 		{
 			throughput >>= 1;
@@ -458,12 +470,16 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 		if (max_throughput != throughput)
 			gpulog(LOG_INFO, thr_id, "Intensity adjusted to %g, %u cuda threads", throughput2intensity(throughput - BOOST), throughput - BOOST);
 		else
+#endif
 			gpulog(LOG_INFO, thr_id, "Intensity set to %g, %u cuda threads", throughput2intensity(throughput - BOOST), throughput - BOOST);
 
 		max_throughput = throughput;
 
-		CUDA_SAFE_CALL(cudaMallocHost((void **)&h_ark[thr_id], sizeof(int)*16));
-		CUDA_CALL_OR_RET_X(cudaMalloc(&d_ark[thr_id], sizeof(int)*16), 0);
+		CUDA_SAFE_CALL(cudaMallocHost((void **)&h_ark[thr_id], sizeof(int) * MAX_GPUS));
+		CUDA_SAFE_CALL(cudaMalloc(&d_ark[thr_id], sizeof(int) * MAX_GPUS));
+
+//		if (!thr_id)
+//			CUDA_SAFE_CALL(cudaHostAlloc(&test_hash, (size_t)64 * throughput, cudaHostAllocDefault));
 
 //		CUDA_SAFE_CALL(cudaMalloc(&d_ark[thr_id], sizeof(int)));
 //		*h_ark[thr_id] = 0;
@@ -523,13 +539,21 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 //		x11_shavite512_cpu_init(thr_id, throughput);
 		if (throughput > (SIMD_MAX))
 		{
+#if 0
 			if (x11_simd512_cpu_init(thr_id, SIMD_MAX))
+#else
+			if (alt_x11_simd512_cpu_init(thr_id, SIMD_MAX))
+#endif
 			{
 				applog(LOG_WARNING, "SIMD was unable to initialize :( exiting...");
 				exit(-1);
 			}// 64
 		}
+#if 0
 		else if (x11_simd512_cpu_init(thr_id, throughput))
+#else
+		else if (alt_x11_simd512_cpu_init(thr_id, throughput))
+#endif
 		{
 			applog(LOG_WARNING, "SIMD was unable to initialize :( exiting...");
 			exit(-1);
@@ -540,7 +564,7 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 		x16_fugue512_cpu_init(thr_id, throughput);
 		x15_whirlpool_cpu_init(thr_id, throughput, 0);
 		x16_whirlpool512_init(thr_id, throughput);
-		x17_sha512_cpu_init(thr_id, throughput);
+//		x17_sha512_cpu_init(thr_id, throughput);
 
 //		CUDA_CALL_OR_RET_X(cudaMalloc(&d_hash[thr_id], (size_t)64 * throughput), 0);
 
@@ -554,7 +578,6 @@ extern "C" int x16r_init(int thr_id, uint32_t max_nonce)
 extern volatile time_t g_work_time;
 
 static uint64_t tlast[MAX_GPUS] = { 0 };
-
 
 extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, unsigned long *hashes_done, uint64_t seq)
 {
@@ -584,8 +607,9 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		((uint32_t*)pdata)[2] = 0x88888888;
 		//! Should cause vanila v0.1 code to have shavite CPU invalid hash error at various intervals
 		*/
-		((uint32_t*)ptarget)[7] = 0x123f; // 2:64/80 + D:64  broke
-		*((uint64_t*)&pdata[1]) = 0x2222222000000000;//seq;//0x67452301EFCDAB89;//0x31C8B76F520AEDF4;
+		((uint32_t*)ptarget)[7] = 0x1ff; // 2:64/80 + D:64  broke
+		*((uint64_t*)&pdata[1]) = TEST_ALGO;//0x67452301EFCDAB89;
+//		*((uint64_t*)&pdata[1]) = 0x2222222000000000;//seq;//0x67452301EFCDAB89;//0x31C8B76F520AEDF4;
 		//		*((uint64_t*)&pdata[1]) = 0xbbbbbbbbbbbbbbbb;//2:64,4:80,8,a,e.. error//44B54B9F248C0708//0x31C8B76F520AEDF4;
 		//489f 4f38 33f4 7016 //01346789f
 //		((uint32_t*)pdata)[17] = 0x12345678;
@@ -692,14 +716,14 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		x16_whirlpool512_setBlock_80(thr_id, (void*)endiandata);
 		break;
 	case SHA512:
-		//! second lowest impact.
-		x16_sha512_setBlock_80(thr_id, endiandata);
+		//! second lowest impact.	
+//		x16_sha512_setBlock_80(thr_id, endiandata);
+		x16_sha512_setBlock_80((void*)endiandata);
 		break;
 	}
 
 //	work->nonces[0] = UINT32_MAX;
 	int warn = 0;
-
 	do {
 		pAlgo80[(*(uint64_t*)&endiandata[1] >> 60 - (0 * 4)) & 0x0f](thr_id, throughput, pdata[19], d_hash[thr_id], d_ark[thr_id]);
 //		cudaStreamSynchronize(streamx[thr_id]);
@@ -720,8 +744,37 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (15 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
 
 		*hashes_done = pdata[19] - first_nonce + throughput;
+/*
+		if (!thr_id)
+		{
+			CUDA_CALL_OR_RET_X(cudaMemcpy(test_hash, d_hash[thr_id], throughput * 64, cudaMemcpyDeviceToHost), -1);
+			uint64_t chk_nonce = pdata[19];
+			const int check_rate = 1;//6;//0x100;
+			for (int i = 0; i < throughput; i += check_rate)
+			{
+				const uint32_t Htarg = ptarget[7];
+				uint32_t _ALIGN(64) vhash[8];
+				be32enc(&endiandata[19], chk_nonce);
+				x16r_hash(vhash, endiandata);
 
+				if (memcmp(&test_hash[i * 16], vhash, 64))
+				{
+					printf("Error: ");
+					for (int j = 0; j < 4; j++)
+						printf("%016I64X", *(uint64_t*)(&test_hash[j * 2 + (i * 16)]));
+					printf(" != ");
+					for (int j = 0; j < 4; j++)
+						printf("%016I64X", *(uint64_t*)(&vhash[j * 2]));
+					printf("(%I64X)\n", chk_nonce);
+					Sleep(250);
+				}
+				chk_nonce += check_rate;
+			}
+			printf("finished check\n");
+		}
+*/
 		work->nonces[0] = cuda_check_hash(thr_id, throughput, pdata[19], d_hash[thr_id], d_ark[thr_id]);
+
 #ifdef _DEBUG
 		uint32_t _ALIGN(64) dhash[8];
 		be32enc(&endiandata[19], pdata[19]);
@@ -805,7 +858,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 				}
 			}
 		}
-
+#if 0
 		if ((uint64_t)throughput + pdata[19] >= max_nonce) {
 			if (pdata[19] == max_nonce)
 				break;
@@ -842,14 +895,15 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 			}
 			pdata[19] += throughput;
 		}
-		/*
+#else
+
 		if ((uint64_t)throughput + pdata[19] >= max_nonce) {
 			pdata[19] = max_nonce;
 			break;
 		}
 
 		pdata[19] += throughput;
-		*/
+#endif
 	} while (pdata[19] < max_nonce && !work_restart[thr_id].restart && *h_ark[thr_id] == 0);
 
 	if ((uint64_t)throughput + pdata[19] < max_nonce)
@@ -1127,7 +1181,8 @@ extern "C" int scanhash_x16s(int thr_id, struct work* work, uint32_t max_nonce, 
 		x16_whirlpool512_setBlock_80(thr_id, (void*)endiandata);
 		break;
 	case SHA512:
-		x16_sha512_setBlock_80(thr_id, endiandata);
+//		x16_sha512_setBlock_80(thr_id, endiandata);
+		x16_sha512_setBlock_80((void*)endiandata);
 		break;
 	}
 

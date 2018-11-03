@@ -316,12 +316,15 @@ void Compression512(uint2 *msg, uint2 *hash)
 	hash[14] = ROL(hash[2],15) + (XH64 ^ q[30] ^ msg[14]) + (SHR(XL64,7) ^ q[21] ^ q[14]);
 	hash[15] = ROL(hash[3],16) + (XH64 ^ q[31] ^ msg[15]) + (SHR(XL64, 2) ^ q[22] ^ q[15]);
 }
-
+#if 0
 __global__
 #if __CUDA_ARCH__ > 500
 __launch_bounds__(32, 16)
 #else
 __launch_bounds__(64, 8)
+#endif
+#else
+__global__ __launch_bounds__(128, 3)
 #endif
 void quark_bmw512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, volatile int *order)
 {
@@ -394,7 +397,8 @@ void quark_bmw512_gpu_hash_64(uint32_t threads, uint64_t *g_hash, volatile int *
 	}
 }
 
-__global__ __launch_bounds__(256, 2)
+//__global__ __launch_bounds__(256, 2)
+__global__ __launch_bounds__(128, 2)
 void quark_bmw512_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint64_t *g_hash)
 {
 	uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
@@ -490,7 +494,7 @@ void quark_bmw512_cpu_init(int thr_id, uint32_t threads)
 __host__
 void quark_bmw512_cpu_hash_64(int thr_id, uint32_t threads, uint32_t *d_hash, volatile int *order)
 {
-	const uint32_t threadsperblock = 32;
+	const uint32_t threadsperblock = 128;
 	dim3 grid((threads + threadsperblock-1)/threadsperblock);
 	dim3 block(threadsperblock);
 
