@@ -726,7 +726,7 @@ extern "C" int scanhash_x16r(int thr_id, struct work* work, uint32_t max_nonce, 
 	int warn = 0;
 	do {
 		pAlgo80[(*(uint64_t*)&endiandata[1] >> 60 - (0 * 4)) & 0x0f](thr_id, throughput, pdata[19], d_hash[thr_id], d_ark[thr_id]);
-//		cudaStreamSynchronize(streamx[thr_id]);
+		cudaStreamSynchronize(streamx[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (1 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (2 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);
 		pAlgo64[(*(uint64_t*)&endiandata[1] >> 60 - (3 * 4)) & 0x0f](thr_id, throughput, d_hash[thr_id], d_ark[thr_id]);

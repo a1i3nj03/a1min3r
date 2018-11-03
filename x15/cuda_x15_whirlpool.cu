@@ -330,7 +330,8 @@ extern void x15_whirlpool_cpu_free(int thr_id)
 }
 
 __global__
-__launch_bounds__(TPB80,2)
+//__launch_bounds__(TPB80,2)
+__launch_bounds__(TPB80, 1)
 void oldwhirlpool_gpu_hash_80(uint32_t threads, uint32_t startNounce, uint32_t* resNonce, const uint64_t target)
 {
 	__shared__ uint2 sharedMemory[7][256];
@@ -623,7 +624,8 @@ void whirlpool512_cpu_hash_80(int thr_id, uint32_t threads, uint32_t startNounce
 }
 
 __global__
-__launch_bounds__(TPB64,2)
+//__launch_bounds__(TPB64, 2)
+__launch_bounds__(TPB64,1)
 void x15_whirlpool_gpu_hash_64(uint32_t threads, uint64_t *g_hash, volatile int *order)
 {
 #ifdef A1MIN3R_MOD

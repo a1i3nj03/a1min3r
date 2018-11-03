@@ -237,7 +237,7 @@ void x16_echo512_gpu_hash_80_sp(uint32_t threads, uint32_t startNonce, uint64_t 
 	__shared__  uint32_t sharedMemory[1024 * 8];
 
 	aes_gpu_init256_32(sharedMemory);
-	__threadfence_block();
+//	__threadfence_block();
 
 	const uint32_t thread = (blockDim.x * blockIdx.x + threadIdx.x);
 	if (thread < threads)
@@ -245,6 +245,7 @@ void x16_echo512_gpu_hash_80_sp(uint32_t threads, uint32_t startNonce, uint64_t 
 		uint64_t hashPosition = thread;
 		uint32_t *pHash = (uint32_t*)&g_hash[hashPosition << 3];
 
+		__syncthreads();
 		cuda_echo_round_80(sharedMemory, c_PaddedMessage80, startNonce + thread, pHash);
 	}
 }

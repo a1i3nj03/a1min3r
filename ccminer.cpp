@@ -3760,17 +3760,16 @@ void parse_arg(int key, char *arg)
 		opt_seq = (uint64_t)strtoll(arg, NULL, 16); // No this isn't dev fee related, it's for benchmarking x16r :P
 		opt_seq = ((opt_seq & 0xFFFFFFFF) << 32) | ((opt_seq >> 32) & 0xFFFFFFFF);
 		opt_seq = swab64(opt_seq);
-#else//7,a
+#else
 		opt_seq = 0;
 #define MK_HEX(x)	((x >= '0' && x <= '9') ? x - '0' : \
 					(x >= 'A' && x <= 'F') ? (x - 'A') + 10 : \
 					(x >= 'a' && x <= 'f') ? (x - 'a') + 10 : 0)
 		for (unsigned i = 0; i < strlen(arg) && i < 16; i++)
 		{
-			opt_seq |= (uint64_t)MK_HEX(arg[i]) << (i << 2);
+			opt_seq |= (uint64_t)MK_HEX(arg[i]) << ((15-i) << 2);
 		}
-		opt_seq = ((opt_seq & 0xFFFFFFFF) << 32) | ((opt_seq >> 32) & 0xFFFFFFFF);
-		opt_seq = swab64(opt_seq);
+		opt_seq = (uint32_t)bswap_32(opt_seq) | ((uint64_t)bswap_32(opt_seq >> 32) << 32);
 #endif
 		applog(LOG_BLUE, "0x%016I64X", opt_seq);
 		break;

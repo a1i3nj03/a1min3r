@@ -350,7 +350,7 @@ void x16_shabal512_gpu_hash_80(uint32_t threads, const uint32_t startNonce, uint
 		*(uint2x4*)&Hash[8] = *(uint2x4*)&B[8];
 	}
 }
-
+ 
 __host__
 void x16_shabal512_cuda_hash_80(int thr_id, const uint32_t threads, const uint32_t startNonce, uint32_t *d_hash, volatile int *order)
 {
